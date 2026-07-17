@@ -84,6 +84,80 @@ set timeout    = 10
 
 `new/` にメールが落ちれば mutt 側に自動で反映される。
 
+## 対応プラットフォーム
+
+| プラットフォーム | 状況 |
+|---|---|
+| Linux | サポート |
+| macOS | 動作するはず（常時テストはしていない） |
+| Windows 11 + WSL2 | サポート（下記参照） |
+| Windows（ネイティブ） | 非サポート |
+
+Windows ネイティブは対象外。systemd が無く、Maildir ネイティブな MUA も現実的に使えないため。
+WSL2 を使えば本物の Linux カーネルが動くので、maildirsink も下記の systemd ユニットも無改造で動く。
+
+### Windows 11（WSL2）
+
+WSL2 特有の注意点が 3 つ。
+
+**1. systemd を有効化する。** WSL2 では既定で無効。ディストロ内の `/etc/wsl.conf` に以下を書き、
+Windows 側から `wsl --shutdown` で再起動する:
+
+```ini
+[boot]
+systemd=true
+```
+
+**2. Maildir は Linux 側のファイルシステムに置く。** `~/Maildir` を使い、`/mnt/c/...` 配下には置かない。
+Windows ドライブは drvfs 経由でマウントされており、Maildir が依存する `rename`/`link` の
+アトミック性が保証されない上に遅い。
+
+**3. ネットワーク。** WSL2 は既定で NAT の内側にいる。Windows 上のアプリから `localhost:1025` に
+送る分には localhost forwarding で届くので、既定の設定のままで動く。LAN 上の他マシンから
+受信したい場合、WSL2 の IP は起動ごとに変わる点に注意。Windows 11 22H2 以降なら
+`%UserProfile%\.wslconfig` でミラーモードにすればこの問題は消える:
+
+```ini
+[wsl2]
+networkingMode=mirrored
+```
+
+## サービスとして常駐させる（systemd --user）
+
+毎回手で起動しなくて済むよう、`~/.config/systemd/user/maildirsink.service` を置く:
+
+```ini
+[Unit]
+Description=maildirsink - SMTP sink saving mail to Maildir
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/maildirsink --host localhost --port 1025 --format maildir --dir %h/Maildir
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target
+```
+
+上記の `ExecStart` は `pipx install maildirsink`（コマンドが `~/.local/bin` に入る）を前提にしている。
+別の場所にインストールした場合は `<自分の venv>/bin/maildirsink` などに書き換える。
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now maildirsink.service
+systemctl --user status maildirsink        # 状態確認
+journalctl --user -u maildirsink -f        # ログ追尾
+```
+
+これでログイン時に起動する。ログインしていなくても常駐させたい（OS 起動時から動かしたい）場合は
+linger を有効化する:
+
+```bash
+sudo loginctl enable-linger "$USER"
+```
+
 ## 実装方針（案）
 
 - Python を想定

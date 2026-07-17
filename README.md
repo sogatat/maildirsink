@@ -99,6 +99,84 @@ set timeout    = 10
 
 Once mail lands in `new/`, mutt reflects it automatically.
 
+## Platform support
+
+| Platform | Status |
+|---|---|
+| Linux | Supported |
+| macOS | Should work (not regularly tested) |
+| Windows 11 + WSL2 | Supported — see below |
+| Windows (native) | Not supported |
+
+Native Windows is out of scope: there is no systemd, and Maildir-native MUAs are
+not realistically available there. Use WSL2 instead — it runs a real Linux
+kernel, so maildirsink and the systemd unit below work unmodified.
+
+### Windows 11 (WSL2)
+
+Three WSL2-specific things to get right:
+
+**1. Enable systemd.** It is off by default in WSL2. Add this to `/etc/wsl.conf`
+inside your distro, then run `wsl --shutdown` from Windows to restart it:
+
+```ini
+[boot]
+systemd=true
+```
+
+**2. Keep the Maildir on the Linux filesystem.** Use `~/Maildir`, never a path
+under `/mnt/c/...`. Windows drives are mounted via drvfs, where the atomic
+`rename`/`link` semantics Maildir depends on are unreliable — and it is slow.
+
+**3. Networking.** By default WSL2 sits behind NAT. Sending from a Windows app to
+`localhost:1025` reaches maildirsink via localhost forwarding, so the default
+setup just works. If you need to receive from other machines on the LAN, note
+that the WSL2 VM's IP changes on each boot; on Windows 11 22H2+ you can avoid
+that entirely with mirrored networking in `%UserProfile%\.wslconfig`:
+
+```ini
+[wsl2]
+networkingMode=mirrored
+```
+
+## Running as a service (systemd --user)
+
+To keep maildirsink running without starting it by hand, drop a user unit at
+`~/.config/systemd/user/maildirsink.service`:
+
+```ini
+[Unit]
+Description=maildirsink - SMTP sink saving mail to Maildir
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/maildirsink --host localhost --port 1025 --format maildir --dir %h/Maildir
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target
+```
+
+The `ExecStart` path above assumes `pipx install maildirsink` (which puts the
+command in `~/.local/bin`). Adjust it if you installed elsewhere — e.g. point it
+at `<your-venv>/bin/maildirsink`.
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now maildirsink.service
+systemctl --user status maildirsink        # check
+journalctl --user -u maildirsink -f        # follow logs
+```
+
+This starts maildirsink when you log in. To keep it running without an active
+login (and to start it at boot), enable lingering:
+
+```bash
+sudo loginctl enable-linger "$USER"
+```
+
 ## Implementation notes
 
 - Written in Python.
