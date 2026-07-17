@@ -1,75 +1,90 @@
 # maildirsink
 
-SMTP でメールを受け取り、そのままファイルに保存するだけの小さなツール。
-mailpit のような開発用メール受信ツールだが、UI も転送機能も持たず「受けて保存する」ことに徹する。
+A tiny tool that receives mail over SMTP and just saves it to a file.
+Like a development mail sink such as [mailpit](https://github.com/axllent/mailpit),
+but with no UI and no forwarding — it sticks to one job: *receive and store*.
 
-## 動機
+日本語版は [README-ja.md](README-ja.md) を参照してください。
 
-[find-job](../find-job) プロジェクトでは、通知メールをシェルスクリプトで Maildir に直接書き込んでいた。
-この「メールをローカルに保存する」部分だけを汎用ツールとして切り出したのが maildirsink。
+## Why
 
-保存先は **標準 Maildir** に徹する。Maildir をネイティブに扱う MUA（mutt / neomutt など）や
-既存の Maildir ツール群（procmail・mbsync 等）とそのまま噛み合うのが狙い。
+In the [find-job](../find-job) project, notification mail was written directly
+into a Maildir by a shell script. maildirsink extracts just that
+"store mail locally" part into a general-purpose tool.
 
-## 仕様
+It commits to **standard Maildir** as the storage target, so it slots straight
+into Maildir-native MUAs (mutt / neomutt) and existing Maildir tooling
+(procmail, mbsync, and friends).
 
-### 動作
+## What it does
 
-1. 起動すると指定ポートで SMTP サーバーとして待ち受ける
-2. メールを受信したら、指定ディレクトリに指定形式で保存する
-3. それ以外のことはしない（転送しない・UIなし）
+1. On startup, listens as an SMTP server on the given port.
+2. On receiving a message, stores it in the given directory in the given format.
+3. Nothing else — no forwarding, no web UI.
 
-### 保存形式
+## Storage formats
 
-- **maildir** — 標準 Maildir 形式。
-  受信メールは `tmp/` に書き込んでから **`new/`**（未読メール置き場）に mv する。
-  ファイル名は一意性を保証する標準命名（`時刻.Pプロセス識別子.ホスト名`）に従う。
-  mutt / neomutt はこの `new/` を直接スキャンして新着を表示するため、追加設定は不要。
+- **maildir** — standard Maildir. Incoming mail is written to `tmp/` and then
+  moved into **`new/`** (the unread-mail spool). Filenames follow the standard
+  uniqueness-guaranteeing scheme (`time.Ppid.hostname`). mutt / neomutt scan
+  `new/` directly, so no extra setup is needed.
 
-- **json** — 1メール1ファイルの JSON。最小構成:
+- **json** — one JSON file per message:
 
   ```json
   {
-    "subject": "件名",
-    "body": "本文"
+    "subject": "...",
+    "from": "...",
+    "to": "...",
+    "date": "...",
+    "message_id": "...",
+    "body": "..."
   }
   ```
 
-  from / to / date なども入れるかは実装時に検討（入れる方向で考える）
+> **Note:** Direct delivery to Thunderbird is intentionally out of scope.
+> Thunderbird keeps a `.msf` summary cache and won't notice mail written into a
+> Maildir from outside until you "Repair Folder". Maildir-native MUAs like mutt
+> don't have this problem and pick up mail dropped into `new/` immediately.
 
-> **補足:** Thunderbird 直配信はしない方針。Thunderbird は `.msf` サマリーキャッシュを持ち、
-> 外部から Maildir に書き込んだメールを「フォルダ修復」まで認識しない。
-> mutt など Maildir ネイティブの MUA にはこの問題が無く、`new/` への投函をそのまま検知する。
+## Install
 
-### CLI
+```bash
+pip install .
+# or, for development:
+pip install -e ".[dev]"
+```
+
+## Usage
 
 ```bash
 maildirsink [--port PORT] [--host HOST] [--format maildir|json] [--dir DIR]
 ```
 
-| オプション | 意味 | デフォルト |
+| Option | Meaning | Default |
 |---|---|---|
-| `--port` | SMTP 待ち受けポート | 1025 |
-| `--host` | 待ち受けホスト | localhost |
-| `--format` | 保存形式（maildir / json） | maildir |
-| `--dir` | 保存先ディレクトリ | `./mail` |
+| `--port` | SMTP listen port | 1025 |
+| `--host` | Listen host | localhost |
+| `--format` | Storage format (maildir / json) | maildir |
+| `--dir` | Storage directory | `./mail` |
 
-### LAN に公開する
+### Exposing on a LAN
 
-既定の `localhost` は同一ホストからの送信だけを受け付ける。別ホスト（コンテナや
-LAN 上の find-job など）から送りたい場合は全インターフェースで待ち受ける:
+The default `localhost` only accepts mail sent from the same host. To receive
+from another host (a container, a find-job instance on the LAN, etc.), listen on
+all interfaces:
 
 ```bash
 maildirsink --host 0.0.0.0 --port 1025
 ```
 
-> **注意:** 認証も TLS も持たないため、信頼できる LAN 内だけで使うこと。
-> インターネットに直接晒さない。
+> **Warning:** There is no authentication and no TLS. Use it only within a
+> trusted LAN. Do not expose it directly to the internet.
 
-## 表示側（mutt / neomutt）
+## Reading mail (mutt / neomutt)
 
-maildirsink が出力した Maildir をそのまま指定するだけ。`.msf` のような
-インデックスキャッシュを持たないため、修復操作は一切不要。
+Just point your MUA at the Maildir that maildirsink writes to. Because there is
+no index cache like `.msf`, no repair step is ever needed.
 
 ```muttrc
 set mbox_type = Maildir
@@ -77,33 +92,28 @@ set folder    = "/path/to/maildir"
 set spoolfile = "+."
 mailboxes     = "/path/to/maildir"
 
-# 起動中に届いたメールも自動で拾う
-set mail_check = 5      # 秒
+# Pick up mail that arrives while mutt is running
+set mail_check = 5      # seconds
 set timeout    = 10
 ```
 
-`new/` にメールが落ちれば mutt 側に自動で反映される。
+Once mail lands in `new/`, mutt reflects it automatically.
 
-## 実装方針（案）
+## Implementation notes
 
-- Python を想定
-  - SMTP サーバー: `aiosmtpd`（標準の `smtpd` は Python 3.12 で削除済み）
-  - Maildir 書き込み: 標準ライブラリ `mailbox.Maildir` が使える。
-    `Maildir.add()` は `tmp/` → `new/` の手順とファイル名の一意性を自動で処理してくれる
-    （参考実装 `reference/maildir-delivery.sh` は手書きの実例）
-- 文字コード: 件名の MIME エンコード（`=?UTF-8?B?...?=`）のデコードを忘れずに
+- Written in Python.
+  - SMTP server: `aiosmtpd` (the stdlib `smtpd` was removed in Python 3.12).
+  - Maildir writing: the stdlib `mailbox.Maildir`. `Maildir.add()` handles the
+    `tmp/` → `new/` sequence and filename uniqueness for you
+    (`reference/maildir-delivery.sh` is a hand-written example of the same).
+- Character sets: MIME-encoded headers (`=?UTF-8?B?...?=`) are decoded.
 
-## 参考資料
+## Tests
 
-- `reference/maildir-delivery.sh` — find-job の check.sh から抜粋した Maildir 直接配信コード。
-  ファイル名の一意性の作り方、tmp→保存 の手順の実例。
-  ※ 抜粋元は Thunderbird 向けに `cur/` へ書いていたが、maildirsink は標準どおり `new/` に投函する
+```bash
+pytest
+```
 
-## 決定済み
+## License
 
-- **JSON フィールド:** `subject` / `from` / `to` / `date` / `message_id` / `body` を保存する。
-- **保存先ディレクトリのデフォルト:** `./mail`（カレント配下）。
-
-## 未決定事項
-
-- パッケージ名の衝突確認（PyPI / GitHub に maildirsink が既にないか）
+MIT — see [LICENSE](LICENSE).
