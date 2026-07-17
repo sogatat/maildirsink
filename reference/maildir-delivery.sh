@@ -1,5 +1,5 @@
 #!/bin/bash
-# find-job/check.sh からの抜粋: Maildir 直接配信部分
+# 既存のシェルスクリプトからの抜粋: Maildir 直接配信部分
 #
 # ポイント:
 # - Maildir 形式は tmp/ に書き込んでから cur/ に mv する（配信の原子性を保証する標準手順）

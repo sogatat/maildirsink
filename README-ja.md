@@ -7,7 +7,7 @@ English version: [README.md](https://github.com/sogatat/maildirsink/blob/main/RE
 
 ## 動機
 
-個人プロジェクト find-job では、通知メールをシェルスクリプトで Maildir に直接書き込んでいた。
+ある個人プロジェクトでは、通知メールをシェルスクリプトで Maildir に直接書き込んでいた。
 この「メールをローカルに保存する」部分だけを汎用ツールとして切り出したのが maildirsink。
 
 保存先は **標準 Maildir** に徹する。Maildir をネイティブに扱う MUA（mutt / neomutt など）や
@@ -59,7 +59,7 @@ maildirsink [--port PORT] [--host HOST] [--format maildir|json] [--dir DIR]
 ### LAN に公開する
 
 既定の `localhost` は同一ホストからの送信だけを受け付ける。別ホスト（コンテナや
-LAN 上の find-job など）から送りたい場合は全インターフェースで待ち受ける:
+LAN 上の別マシンで動くアプリなど）から送りたい場合は全インターフェースで待ち受ける:
 
 ```bash
 maildirsink --host 0.0.0.0 --port 1025
@@ -171,7 +171,7 @@ sudo loginctl enable-linger "$USER"
 
 ## 参考資料
 
-- `reference/maildir-delivery.sh` — find-job の check.sh から抜粋した Maildir 直接配信コード。
+- `reference/maildir-delivery.sh` — 既存のシェルスクリプトから抜粋した Maildir 直接配信コード。
   ファイル名の一意性の作り方、tmp→保存 の手順の実例。
   ※ 抜粋元は Thunderbird 向けに `cur/` へ書いていたが、maildirsink は標準どおり `new/` に投函する
 

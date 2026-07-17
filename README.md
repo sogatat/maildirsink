@@ -8,9 +8,9 @@ but with no UI and no forwarding — it sticks to one job: *receive and store*.
 
 ## Why
 
-In a personal project (find-job), notification mail was written directly into a
-Maildir by a shell script. maildirsink extracts just that "store mail locally"
-part into a general-purpose tool.
+A personal project used to write notification mail directly into a Maildir with
+a shell script. maildirsink extracts just that "store mail locally" part into a
+general-purpose tool.
 
 It commits to **standard Maildir** as the storage target, so it slots straight
 into Maildir-native MUAs (mutt / neomutt) and existing Maildir tooling
@@ -71,8 +71,8 @@ maildirsink [--port PORT] [--host HOST] [--format maildir|json] [--dir DIR]
 ### Exposing on a LAN
 
 The default `localhost` only accepts mail sent from the same host. To receive
-from another host (a container, a find-job instance on the LAN, etc.), listen on
-all interfaces:
+from another host (a container, an app running elsewhere on the LAN, etc.),
+listen on all interfaces:
 
 ```bash
 maildirsink --host 0.0.0.0 --port 1025
