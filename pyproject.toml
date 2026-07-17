@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "maildirsink"
-version = "0.1.0"
-description = "SMTP でメールを受け取り Maildir / JSON に保存するだけの開発用メール受信ツール"
+version = "0.1.1"
+description = "Tiny SMTP sink that saves incoming mail straight to a Maildir or JSON — no UI, no forwarding"
 readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
