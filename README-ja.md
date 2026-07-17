@@ -3,9 +3,11 @@
 SMTP でメールを受け取り、そのままファイルに保存するだけの小さなツール。
 mailpit のような開発用メール受信ツールだが、UI も転送機能も持たず「受けて保存する」ことに徹する。
 
+English version: [README.md](https://github.com/sogatat/maildirsink/blob/main/README.md)
+
 ## 動機
 
-[find-job](../find-job) プロジェクトでは、通知メールをシェルスクリプトで Maildir に直接書き込んでいた。
+個人プロジェクト find-job では、通知メールをシェルスクリプトで Maildir に直接書き込んでいた。
 この「メールをローカルに保存する」部分だけを汎用ツールとして切り出したのが maildirsink。
 
 保存先は **標準 Maildir** に徹する。Maildir をネイティブに扱う MUA（mutt / neomutt など）や

@@ -4,13 +4,13 @@ A tiny tool that receives mail over SMTP and just saves it to a file.
 Like a development mail sink such as [mailpit](https://github.com/axllent/mailpit),
 but with no UI and no forwarding — it sticks to one job: *receive and store*.
 
-日本語版は [README-ja.md](README-ja.md) を参照してください。
+日本語版は [README-ja.md](https://github.com/sogatat/maildirsink/blob/main/README-ja.md) を参照してください。
 
 ## Why
 
-In the [find-job](../find-job) project, notification mail was written directly
-into a Maildir by a shell script. maildirsink extracts just that
-"store mail locally" part into a general-purpose tool.
+In a personal project (find-job), notification mail was written directly into a
+Maildir by a shell script. maildirsink extracts just that "store mail locally"
+part into a general-purpose tool.
 
 It commits to **standard Maildir** as the storage target, so it slots straight
 into Maildir-native MUAs (mutt / neomutt) and existing Maildir tooling
@@ -194,4 +194,4 @@ pytest
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](https://github.com/sogatat/maildirsink/blob/main/LICENSE).
